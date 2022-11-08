@@ -1,0 +1,104 @@
+Sysuse “Combine 1.data”
+
+** Let us attempt some summary statistics
+describe 
+summarize, detail
+label var GDPpercapita "GDP per capita, PPP (current international $) [NY.GDP.PCAP.PP.CD]"
+label var fertilityrate "Fertility rate, total (births per woman) [SP.DYN.TFRT.IN]"
+label var femalelabor "Labor force participation rate, female (% of female population ages 15+) (modeled ILO estimate) [SL.TLF.CACT.FE.ZS]"
+label var population "Population, total [SP.POP.TOTL]"
+
+** Since Suicide Rates are in terms of per 100,000 population, we will reshape a few variables for symmetry purposes. 
+gen divorce = 100 * crudedivorcerateper1000inhabitan 
+gen marriage = 100 * crudemarriagerateper1000inhabita 
+drop crudedivorcerateper1000inhabitan
+drop crudemarriagerateper1000inhabita
+** Some further renaming for personal convenience
+rename averagetotalyearsofschoolingfora schooling 
+rename numberofinternetusersowidbasedon numberinternetusers
+rename individualsusingtheinternetofpop percentinternetusers
+
+****** 
+** Introductory Overview Graphs 
+**Correlations 
+correlate malesu alccons unemploymentrate numberinternetusers percentinternetusers schooling GDPpercapita fertilityrate femalelabor population divorce marriage 
+correlate both alccons unemploymentrate numberinternetusers percentinternetusers schooling GDPpercapita fertilityrate femalelabor population divorce marriage
+
+** Scatterplots 
+twoway scatter malesu totaldeaths, by(entity_id)
+twoway scatter femalesu totaldeaths, by(entity_id)
+
+** Bar Graphs
+
+gen malesu_tot = (totaldeaths*malesu)/100000
+gen femalesu_tot = (totaldeaths*femalesu)/100000
+label var malesu_tot "Total Male Suicide Annual"
+label var femalesu_tot "Total Female Suicide Annual"
+
+graph hbar (mean) malesu_tot (mean) femalesu_tot, over(entity)
+
+** Heterogeneity over time
+
+
+bysort year: egen malesu_mean_time=mean(malesu)
+twoway scatter malesu year, msymbol(circle_hollow) || connected malesu_mean_time year,
+msymbol(diamond) || , xlabel(1990(1)2017) || 
+
+bysort year: egen femalesu_mean_time=mean(femalesu)
+twoway scatter femalesu year, msymbol(circle_hollow) || connected femalesu_mean_time year,
+msymbol(diamond) || , xlabel(1990(1)2017) ||
+
+** Country specific comparisons 
+
+xtline malesu if entity_id ==240 |  entity_id ==260 | entity_id ==100 | entity_id ==40 | entity_id ==95, overlay
+xtline femalesu if entity_id ==240 |  entity_id ==260 | entity_id ==100 | entity_id ==40 | entity_id ==95, overlay
+
+*** Econometric Analysis and saving of tables into Microsoft Word
+** Two way fixed effects with robust standard errors
+putdocx begin
+xtreg femalesu i.year alccons unemploymentrate percentinternetusers schooling GDPpercapita fertilityrate femalelabor population divorce marriage, fe vce(robust)
+estimates store female_suicide
+putdocx table Table1=etable
+. putdocx save example1
+**
+xtreg malesu i.year alccons unemploymentrate percentinternetusers schooling GDPpercapita fertilityrate femalelabor population divorce marriage, fe vce(robust)
+estimates store male_suicide
+putdocx table Table1=etable
+. putdocx save example2
+**
+
+xtreg malesu i.year alccons unemploymentrate percentinternetusers schooling GDPpercapita fertilityrate femalelabor population divorce marriage, fe vce(robust)
+estimates store male_suicide
+putdocx table Table1=etable
+. putdocx save example2
+xtreg both i.year alccons unemploymentrate percentinternetusers schooling GDPpercapita fertilityrate femalelabor population divorce marriage, fe vce(robust)
+estimates store both_suicide
+esttab female_suicide male_suicide both_suicide
+esttab female_suicide male_suicide both_suicide using mydoc.doc, b(%9.2fc) p(%9.2fc)
+
+** Comparison to other econometric and statistic models
+reg both year alccons unemploymentrate numberinternetusers percentinternetusers schooling GDPpercapita fertilityrate femalelabor population divorce marriage
+estimates store OLS_iid
+reg both year alccons unemploymentrate numberinternetusers percentinternetusers schooling GDPpercapita fertilityrate femalelabor population divorce marriage, robust
+estimates store OLS_robust
+reg both year alccons unemploymentrate numberinternetusers percentinternetusers schooling GDPpercapita fertilityrate femalelabor population divorce marriage, cluster(entity)
+estimates store OLS_cluster
+xtreg both i.year alccons unemploymentrate numberinternetusers percentinternetusers schooling GDPpercapita fertilityrate femalelabor population divorce marriage, fe vce(robust)
+estimates store fixed_effects
+estimates table OLS_robust OLS_cluster fixed_effects, b(%9.4f) se(%5.3f) t(%5.2f) title(Estimates of Female & Male Suicide Rates by OLS and FE)
+
+** Feel free to try various combinations as I did. 
+
+** Robustness checks 
+** Changing the number of years
+** 
+** Hausman Test to check whether random effects or fixed effects model is better
+** for male, female, and both
+xtreg malesu year alccons unemploymentrate percentinternetusers schooling GDPpercapita fertilityrate population femalelabor divorce marriage, fe
+estimates store fe_male
+xtreg malesu year alccons unemploymentrate percentinternetusers schooling GDPpercapita fertilityrate population femalelabor divorce marriage, re 
+estimates store re_male
+hausman fe_male re_male
+
+
+
