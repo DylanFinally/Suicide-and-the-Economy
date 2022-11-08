@@ -1,6 +1,8 @@
 
 This project aims at assessing which socioeconomic factors most critically influence suicide rates. A two-way robust fixed effects model is thus employed. 
 
+Codes are for Stata. Python will follow when I have time. 
+
 The inspiration for this endeavor stems from methodology employed by Yang (1992) and Blasco-Fontecilla et al. (2011),
 who utilized a multi regression analysis and mixed effects model respectively to examine suicide rates.
 
