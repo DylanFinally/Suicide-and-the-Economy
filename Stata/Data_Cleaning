@@ -1,0 +1,136 @@
+*************************************************************
+Cd "C:\Users\dylan\....\....\....\Data”
+**Data Clean Up and Data Merging
+*************************************************************
+** Proceed to use insheet for each excel data file and save as a dta. This will allow us to merge them with our master file WHO suicide data set. 
+**Cleaning the individual datasets
+**Make sure excel files are saved as .csv
+** Example for OECD unemployment rate.
+insheet using "OECD Unemployment Rate Annual.csv"
+drop frequency
+drop measure
+drop indicator
+drop subject
+drop flagcodes
+** Renaming the variable is up to the user
+rename value unemploymentrate
+rename location code
+*************************************************************
+
+** Time Variations **
+** Some of the below code was necessary to align all time elements within the datasets to be the same. 
+**
+rename time year
+rename v1 year
+
+*************************************************************
+** If a variable is a string, we must convert it to a number again: 
+** Example:
+rename year year_id
+gen year = real(year_id)
+drop year_id
+** Another Example: 
+rename v5 femalelaborstring
+gen femalelabor = real(femalelaborstring)
+drop femalelaborstring 
+**
+
+*************************************************************
+
+** Ordering the variables **
+** Sometimes it was necessary to organize the order of variables 
+Order entity code year variable_of_interest
+** save the file 
+** close the file 
+*************************************************************
+
+**Suicide Rates: 
+insheet using “WHO Suicide SEX.csv”
+
+** Changing some variable names for easier usage
+rename femalesuiciderateagestandardized femalesu
+rename malesuiciderateagestandardized malesu
+rename deathsselfharmsexbothageagestand both
+** Limiting the project on a specific list of twenty countries, including: Australia, Austria, Belgium, Chile, Denmark, Finland, France, Germany, Greece, Italy, Japan, Mexico, Netherlands, Norway, Portugal, Spain, Sweden, Switzerland, United Kingdom, and the United States
+** Each of these countries has an entity_id within the data set. 
+** To drop other countries, I identified the countries in the list by their entity_id and dropped the rest.
+** Initially, I had thirty countries but due to data incompleteness and further potential unobserved heterogeneity, such as cultural differences, I dropped the rest. 
+** Australia: 17
+** Austria: 18
+** Belgium: 25
+** Chile: 51
+** Denmark: 68
+** Finland: 94
+** France: 95
+** Germany: 100
+** Greece: 102
+** Italy: 126
+** Japan: 128
+** Mexico: 158
+** Netherlands: 172
+** Norway: 185
+** Portugal: 198
+** Spain: 233
+** Sweden: 239
+** Switzerland: 240
+** United Kingdom: 259
+** United States: 260
+
+encode entity, gen(entity_id)
+generate country_id = entity_id
+drop if entity_id != 260 & & entity_id !=158 & entity_id !=18 & entity_id !=25 & entity_id !=68 & entity_id !=94 & entity_id !=95 & entity_id !=100 & entity_id !=102 & entity_id !=126 & entity_id !=172 & entity_id !=185 & entity_id !=198 & entity_id !=233 & entity_id !=239 & entity_id !=240 & entity_id !=259 & entity_id !=17 & entity_id !=128 & entity_id !=51 
+** Save File 
+*************************************************************
+** Combining all dta files of the datasets with the master. 
+** if the master file is not currently open 
+Sysuse “WHO Suicide.dta”
+merge 1:1 code year using "OECD Alcohol"
+drop country_id
+drop if entity_id ==.
+drop _merge 
+*****
+merge 1:1 code year using "OECD Unemployment Rate Annual"
+drop if entity_id ==.
+drop _merge 
+*****
+merge 1:1 entity year using "OWiD Divorce Rates.dta"
+drop if entity_id ==.
+drop _merge 
+*****
+merge 1:1 entity year using "OWiD Marriage Rates"
+drop if entity_id ==.
+drop _merge
+******
+merge 1:1 entity year using "OWiD Number of Internet Users per Country.dta"
+drop if entity_id ==.
+drop _merge
+********
+merge 1:1 entity year using "OWiD Percentage of Internet Users per Country.dta"
+drop if entity_id ==.
+drop _merge
+*****
+merge 1:1 entity year using "OWiD Years of Schooling.dta"
+drop if entity_id ==.
+drop _merge
+*****
+merge 1:1 entity year using "World Bank GDP.dta"
+drop if entity_id ==.
+drop _merge
+******
+merge 1:1 entity year using "World Bank Fertility Rate.dta"
+drop if entity_id ==.
+drop _merge
+******
+merge 1:1 entity year using "World Bank Female Labor Force"
+drop if entity_id ==.
+drop _merge
+*****
+merge 1:1 entity year using "World Bank Population"
+drop if entity_id ==.
+drop _merge
+*******
+drop if year > 2017
+** Make sure to save the file, as “Combine 1.dta” for example. 
+** (I like to make multiple copies to keep track of the progress)
+*************************************************************
+** Now that all files have been merged, we will begin editing the combined dataset. 
